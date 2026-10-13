@@ -62,12 +62,7 @@ Sistema de control en tiempo real para el efector final del brazo derecho de un 
 ##  Estructura del Repositorio
 ```text
 Taller-ejercicio-2/
-│
-├── firmware/
-│   └── joystick_baxter/
-│       └── joystick_baxter.ino      # Código fuente para el ESP32
-│
-├── pybullet_robots/                 # Modelos URDF y recursos de Baxter
-│
-├── baxter_joystick_control.py       # Script principal de simulación y control HIL
-└── README.md                        # Documentación del proyecto
+ # Código fuente para el ESP32
+ # Modelos URDF y recursos de Baxter
+ # Script principal de simulación y control HIL
+ # Documentación del proyecto
