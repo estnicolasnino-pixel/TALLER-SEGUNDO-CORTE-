@@ -1,0 +1,138 @@
+import time
+import threading
+import numpy as np
+import serial
+import serial.tools.list_ports
+
+from gym_pybullet_drones.utils.enums import DroneModel, Physics
+from gym_pybullet_drones.envs.CtrlAviary import CtrlAviary
+from gym_pybullet_drones.control.DSLPIDControl import DSLPIDControl
+from gym_pybullet_drones.utils.utils import sync
+
+# --- Configuración del Puerto Serial (ESP32) ---
+SERIAL_PORT = "COM5"
+BAUD_RATE = 115200
+
+# Variable global para almacenar el waypoint actual recibido desde el ESP32
+current_waypoint_idx = 0  # 0: Waypoint A, 1: Waypoint B, 2: Waypoint C
+waypoint_lock = threading.Lock()
+
+# Definición espacial de los 3 waypoints (A, B, C) en coordenadas [X, Y, Z] metros
+WAYPOINTS = [
+    np.array([0.0, 0.0, 1.0]),  # Waypoint A
+    np.array([1.0, 0.0, 1.0]),  # Waypoint B
+    np.array([1.0, 1.0, 1.0])   # Waypoint C
+]
+
+def auto_detect_esp32_port():
+    """Busca automáticamente el puerto COM donde esté conectado el ESP32."""
+    ports = serial.tools.list_ports.comports()
+    for port in ports:
+        if "CP210" in port.description or "CH340" in port.description or "USB Serial" in port.description or "COM" in port.device:
+            return port.device
+    return SERIAL_PORT
+
+def serial_listener():
+    """Hilo secundario que escucha continuamente los comandos seriales del ESP32."""
+    global current_waypoint_idx
+    port = auto_detect_esp32_port()
+    print(f"[*] Conectando al ESP32 en el puerto serial: {port}")
+    
+    try:
+        ser = serial.Serial(port, BAUD_RATE, timeout=1)
+        time.sleep(2)
+        print("[+] ¡Conexión serial establecida con el ESP32!")
+        
+        while True:
+            if ser.in_waiting > 0:
+                line = ser.readline().decode('utf-8').strip()
+                if line:
+                    print(f"[ESP32 RAW] -> {line}")
+                    if "A" in line.upper():
+                        with waypoint_lock:
+                            current_waypoint_idx = 0
+                        print("[Waypoint] Cambiado a -> A")
+                    elif "B" in line.upper():
+                        with waypoint_lock:
+                            current_waypoint_idx = 1
+                        print("[Waypoint] Cambiado a -> B")
+                    elif "C" in line.upper():
+                        with waypoint_lock:
+                            current_waypoint_idx = 2
+                        print("[Waypoint] Cambiado a -> C")
+            time.sleep(0.01)
+    except Exception as e:
+        print(f"[-] Error en el puerto serial: {e}")
+        print("[!] Continuando simulación en modo manual/estático (sin ESP32 físico).")
+
+def run():
+    # Parámetros de simulación
+    drone = DroneModel.CF2X
+    num_drones = 1
+    physics = Physics.PYB
+    simulation_freq_hz = 240
+    control_freq_hz = 48
+    gui = True
+
+    # 1. Iniciar el hilo de lectura serial en segundo plano
+    serial_thread = threading.Thread(target=serial_listener, daemon=True)
+    serial_thread.start()
+
+    # 2. Inicializar entorno CtrlAviary
+    env = CtrlAviary(
+        drone_model=drone,
+        num_drones=num_drones,
+        initial_xyzs=np.array([[0, 0, 0.1] + i * np.array([0.2, 0, 0]) for i in range(num_drones)]),
+        initial_rpys=np.zeros((num_drones, 3)),
+        physics=physics,
+        pyb_freq=simulation_freq_hz,
+        ctrl_freq=control_freq_hz,
+        gui=gui,
+        record=False
+    )
+
+    # 3. Inicializar controlador PID
+    ctrl = [DSLPIDControl(drone_model=drone) for i in range(num_drones)]
+
+    START = time.time()
+    iteration = 0  
+    print("[*] Iniciando simulación de drones. Envía comandos desde el ESP32...")
+
+    try:
+        while True:
+            # Obtener el objetivo actual de forma segura usando el hilo
+            with waypoint_lock:
+                target_pos = WAYPOINTS[current_waypoint_idx]
+
+            target_rpy = np.zeros(3)
+            
+            # Calcular RPMs usando el controlador PID integrado
+            action = np.zeros((num_drones, 4))
+            for i in range(num_drones):
+                current_target = target_pos + np.array([i * 0.2, 0, 0])
+                
+                ctrl_action, _, _ = ctrl[i].computeControlFromState(
+                    control_timestep=env.CTRL_TIMESTEP,
+                    state=env._getDroneStateVector(i),
+                    target_pos=current_target,
+                    target_rpy=target_rpy
+                )
+                action[i, :] = ctrl_action
+
+            # Avanzar un paso en la simulación de PyBullet
+            obs, reward, terminated, truncated, info = env.step(action)
+
+            # Renderizar gráfico y sincronizar con el orden correcto de argumentos: sync(i, start_time, timestep)
+            if gui:
+                env.render()
+                sync(iteration, START, env.CTRL_TIMESTEP)
+
+            iteration += 1
+
+    except KeyboardInterrupt:
+        print("\n[*] Simulación detenida por el usuario.")
+    finally:
+        env.close()
+
+if __name__ == "__main__":
+    run()
