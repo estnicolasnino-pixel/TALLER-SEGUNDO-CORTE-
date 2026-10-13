@@ -59,9 +59,8 @@ Sistema de control en tiempo real para el efector final del brazo derecho de un 
 
 ---
 
-##  Estructura del Repositorio
-```text
-Taller-ejercicio-2/
+# Estructura del Repositorio
+
  # Código fuente para el ESP32
  # Modelos URDF y recursos de Baxter
  # Script principal de simulación y control HIL
