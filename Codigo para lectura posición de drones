@@ -1,0 +1,36 @@
+// Pines donde están conectados los botones para los Waypoints A, B y C
+const int BUTTON_A = 12;
+const int BUTTON_B = 14;
+const int BUTTON_C = 27;
+
+void setup() {
+  Serial.begin(115200);
+  
+  // Configuramos los pines como entradas con resistencia pull-up interna
+  pinMode(BUTTON_A, INPUT_PULLUP);
+  pinMode(BUTTON_B, INPUT_PULLUP);
+  pinMode(BUTTON_C, INPUT_PULLUP);
+  
+  delay(1000);
+  Serial.println("ESP32 Listo para enviar comandos de Waypoints.");
+}
+
+void loop() {
+  // Nota: Como usamos INPUT_PULLUP, al presionar el botón el pin lee LOW (0)
+  if (digitalRead(BUTTON_A) == LOW) {
+    Serial.println("A");  // Envía el comando A por el puerto serial
+    delay(300);           // Antirrebote simple (debounce)
+  }
+  
+  if (digitalRead(BUTTON_B) == LOW) {
+    Serial.println("B");  // Envía el comando B por el puerto serial
+    delay(300);
+  }
+  
+  if (digitalRead(BUTTON_C) == LOW) {
+    Serial.println("C");  // Envía el comando C por el puerto serial
+    delay(300);
+  }
+  
+  delay(50); // Pequeña pausa general
+}
