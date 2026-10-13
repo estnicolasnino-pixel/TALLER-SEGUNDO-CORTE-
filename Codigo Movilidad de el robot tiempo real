@@ -1,0 +1,90 @@
+import pybullet as p
+import pybullet_data
+import serial
+import time
+
+# Configuración del puerto Serial (Detectado en COM5)
+SERIAL_PORT = 'COM5' 
+BAUD_RATE = 115200
+
+try:
+    ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=0.01)
+    time.sleep(2)
+    print(f"Conexión exitosa con la ESP32 en {SERIAL_PORT}")
+except Exception as e:
+    print(f"No se pudo conectar al puerto serial: {e}")
+    ser = None
+
+# Inicializar simulación PyBullet en modo GUI
+physicsClient = p.connect(p.GUI)
+p.setAdditionalSearchPath(pybullet_data.getDataPath())
+p.loadURDF("plane.urdf")
+
+# Cargar el robot R2D2 en una posición inicial estable
+startPos = [0, 0, 0.5]
+startOrientation = p.getQuaternionFromEuler([0, 0, 0])
+robot_id = p.loadURDF("r2d2.urdf", startPos, startOrientation)
+
+# Detectar automáticamente los índices de las articulaciones de la pinza (gripper)
+gripper_indices = []
+for i in range(p.getNumJoints(robot_id)):
+    info = p.getJointInfo(robot_id, i)
+    joint_name = info[1].decode('utf-8')
+    if 'gripper' in joint_name.lower():
+        gripper_indices.append(i)
+
+print(f"Articulaciones de pinza detectadas: {gripper_indices}")
+
+# Variables de control
+target_x = 0.0
+target_y = 0.0
+gripper_state = False  # False = cerrada, True = abierta
+last_button_state = 0
+
+print("Iniciando bucle de simulación con control por joystick y pinza...")
+
+while p.isConnected():
+    joy_x = 0.0
+    joy_y = 0.0
+    button = 0
+
+    # Lectura serial optimizada para vaciar el búfer y responder al instante
+    if ser and ser.in_waiting > 0:
+        try:
+            while ser.in_waiting > 0:
+                line = ser.readline().decode('utf-8').strip()
+            
+            parts = line.split(',')
+            if len(parts) == 3:
+                joy_x = float(parts[0])
+                joy_y = float(parts[1])
+                button = int(parts[2])
+        except Exception:
+            pass
+
+    # Aplicar factor de desplazamiento fluido con el joystick
+    target_x += joy_y * 0.15
+    target_y += joy_x * 0.15
+
+    # Actualizar la posición global del robot en la simulación
+    p.resetBasePositionAndOrientation(robot_id, [target_x, target_y, 0.5], startOrientation)
+
+    # Control de la pinza: detecta cuando presionas el botón (flanco de subida) para alternar el estado
+    if button == 1 and last_button_state == 0:
+        gripper_state = not gripper_state  # Alterna entre abrir y cerrar
+
+    last_button_state = button
+
+    # Aplicar el movimiento a las articulaciones de la pinza
+    target_angle = 0.5 if gripper_state else 0.0  # 0.5 para abrir, 0.0 para cerrar
+    for idx in gripper_indices:
+        p.setJointMotorControl2(
+            bodyUniqueId=robot_id,
+            jointIndex=idx,
+            controlMode=p.POSITION_CONTROL,
+            targetPosition=target_angle,
+            force=50
+        )
+
+    p.stepSimulation()
+    time.sleep(1.0 / 240.0)
