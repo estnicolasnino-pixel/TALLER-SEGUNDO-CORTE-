@@ -45,7 +45,7 @@ Sistema de control en tiempo real para el efector final del brazo derecho de un 
 
 ---
 
-## 🛠️ Requisitos de Hardware y Software
+## Requisitos de Hardware y Software
 
 ### Hardware
 * Microcontrolador **ESP32**.
