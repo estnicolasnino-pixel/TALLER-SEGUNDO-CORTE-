@@ -9,14 +9,14 @@ Sistema de control en tiempo real para simulación de drones (`gym-pybullet-dron
 
 ---
 
-## 🚀 Características Principales
+##  Características Principales
 - **Arquitectura Asíncrona (Multihilo):** Un hilo secundario dedicado en Python monitorea continuamente el puerto serial sin bloquear la frecuencia del bucle de control de la simulación física (240 Hz / 48 Hz).
 - **Control PID Integrado:** Uso de la cinemática y control de velocidad/posición de `gym-pybullet-drones` para un vuelo estable.
 - **Hardware en el Bucle (HIL - Hardware-in-the-Loop):** Interacción física mediante botones conectados a un ESP32 que actúan como comandos de navegación espacial.
 
 ---
 
-## 🛠️ Requisitos de Software y Hardware
+##  Requisitos de Software y Hardware
 
 ### Hardware
 - 1x Placa de desarrollo **ESP32**.
