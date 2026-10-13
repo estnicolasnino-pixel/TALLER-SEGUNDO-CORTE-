@@ -1,0 +1,110 @@
+import time
+import threading
+import numpy as np
+import pybullet as p
+import pybullet_data
+import serial
+
+SERIAL_PORT = "COM5"
+BAUD_RATE = 115200
+
+# Variables de velocidad de control fluido
+target_velocity = np.array([0.0, 0.0, 0.0])
+gripper_closed = False
+serial_lock = threading.Lock()
+
+def serial_listener():
+    """Lee continuamente los valores analógicos y digitales del joystick."""
+    global target_velocity, gripper_closed
+    try:
+        ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1)
+        time.sleep(2)
+        print("[+] Consola de Joystick conectada correctamente.")
+        
+        center_val = 2048
+        threshold = 400
+        max_speed = 0.008  # Velocidad suave y controlada
+        last_btn = 1
+
+        while True:
+            if ser.in_waiting > 0:
+                line = ser.readline().decode('utf-8', errors='ignore').strip()
+                parts = line.split(',')
+                if len(parts) == 3:
+                    try:
+                        x = int(parts[0])
+                        y = int(parts[1])
+                        btn = int(parts[2])
+
+                        # Detectar clic del botón del joystick para el gripper
+                        if btn == 0 and last_btn == 1:
+                            with serial_lock:
+                                gripper_closed = not gripper_closed
+                                print(f"[Gripper] Estado cambiado -> {'Cerrado' if gripper_closed else 'Abierto'}")
+                        last_btn = btn
+
+                        # Calcular velocidad proporcional según la inclinación del joystick
+                        vx = 0.0
+                        vy = 0.0
+
+                        if abs(x - center_val) > threshold:
+                            vx = (x - center_val) / center_val * max_speed
+                        if abs(y - center_val) > threshold:
+                            vy = (y - center_val) / center_val * max_speed
+
+                        with serial_lock:
+                            target_velocity[0] = vx
+                            target_velocity[1] = vy
+                    except ValueError:
+                        pass
+            time.sleep(0.01)
+    except Exception as e:
+        print(f"[-] Error en el puerto serial: {e}")
+
+def run_simulation():
+    global target_velocity
+    
+    # Iniciar hilo serial
+    t = threading.Thread(target=serial_listener, daemon=True)
+    t.start()
+
+    # Iniciar entorno PyBullet
+    p.connect(p.GUI)
+    p.setAdditionalSearchPath(pybullet_data.getDataPath())
+    p.setGravity(0, 0, -9.81)
+
+    p.loadURDF("plane.urdf")
+    
+    # Cargar el robot elevando la base en Z para evitar que quede enterrado
+    baxterId = p.loadURDF(
+        "pybullet_robots/data/baxter_common/baxter_description/urdf/toms_baxter.urdf",
+        basePosition=[0, 0, 0.93],
+        useFixedBase=True
+    )
+
+    print("[*] Robot Baxter listo. Mueve el joystick para controlar la posición de forma fluida.")
+
+    # Índice correcto de la mano derecha obtenido de los links: 20 -> right_hand
+    right_ee_index = 20 
+    
+    # Posición inicial segura y alcanzable frente al brazo derecho de Baxter
+    target_ee_pos = np.array([0.65, -0.2, 1.1])
+
+    while True:
+        with serial_lock:
+            # Acumular velocidad en los ejes X e Y según el movimiento del joystick
+            target_ee_pos[0] += target_velocity[1]  # Mover adelante/atrás
+            target_ee_pos[1] += target_velocity[0]  # Mover izquierda/derecha
+
+        # Cinemática inversa para el brazo derecho
+        joint_poses = p.calculateInverseKinematics(baxterId, right_ee_index, target_ee_pos)
+        
+        # Aplicar las posiciones calculadas a las articulaciones
+        for i, pos in enumerate(joint_poses):
+            p.setJointMotorControl2(baxterId, i, p.POSITION_CONTROL, targetPosition=pos)
+
+        p.stepSimulation()
+        time.sleep(1.0 / 240.0)
+
+if __name__ == "__main__":
+    run_simulation()
