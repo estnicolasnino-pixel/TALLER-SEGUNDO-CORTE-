@@ -29,3 +29,45 @@ Sistema de control en tiempo real para simulación de drones (`gym-pybullet-dron
 - Librerías de Python:
   ```bash
   pip install numpy pyserial pybullet gymnasium
+
+
+  # Control HIL (Hardware-in-the-Loop) de Robot Baxter en PyBullet con ESP32
+
+Sistema de control en tiempo real para el efector final del brazo derecho de un modelo robótico **Baxter** simulado en **PyBullet**, operado físicamente mediante un joystick analógico y un microcontrolador **ESP32** a través de comunicación serial (`pyserial`).
+
+---
+
+##  Características del Proyecto
+* **Comunicación Serial HIL:** Lectura continua y multihilo de datos analógicos y digitales desde un ESP32 a 115200 baudios.
+* **Control Proporcional y Fluido:** Conversión de las coordenadas del joystick en velocidades continuas para el posicionamiento cartesiano.
+* **Cinemática Inversa (IK):** Cálculo en tiempo real de las articulaciones del brazo derecho de Baxter mediante PyBullet `calculateInverseKinematics`.
+* **Control de Pinza (Gripper):** Conmutación de estado (Abierto/Cerrado) mediante el pulsador integrado del joystick.
+
+---
+
+## 🛠️ Requisitos de Hardware y Software
+
+### Hardware
+* Microcontrolador **ESP32**.
+* Joystick analógico de doble eje con botón integrado (ej. **KY-023**).
+* Cables de conexión.
+
+### Software y Librerías (Python 3.12)
+* `pybullet`
+* `pyserial`
+* `numpy`
+
+---
+
+##  Estructura del Repositorio
+```text
+Taller-ejercicio-2/
+│
+├── firmware/
+│   └── joystick_baxter/
+│       └── joystick_baxter.ino      # Código fuente para el ESP32
+│
+├── pybullet_robots/                 # Modelos URDF y recursos de Baxter
+│
+├── baxter_joystick_control.py       # Script principal de simulación y control HIL
+└── README.md                        # Documentación del proyecto
