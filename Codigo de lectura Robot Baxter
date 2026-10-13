@@ -1,0 +1,23 @@
+const int PIN_VRX = 34; // Eje X
+const int PIN_VRY = 35; // Eje Y
+const int PIN_SW  = 27; // Botón
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(PIN_SW, INPUT_PULLUP);
+}
+
+void loop() {
+  int xVal = analogRead(PIN_VRX);
+  int yVal = analogRead(PIN_VRY);
+  int btnState = digitalRead(PIN_SW);
+
+  // Envía los valores en formato X,Y,BTN separados por comas
+  Serial.print(xVal);
+  Serial.print(",");
+  Serial.print(yVal);
+  Serial.print(",");
+  Serial.println(btnState);
+
+  delay(30);
+}
