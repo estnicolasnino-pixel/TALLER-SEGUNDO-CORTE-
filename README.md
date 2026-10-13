@@ -66,3 +66,54 @@ Taller-ejercicio-2/
  # Modelos URDF y recursos de Baxter
  # Script principal de simulación y control HIL
  # Documentación del proyecto
+
+
+
+
+
+## Sistema de Control en Tiempo Real para Simulación Robótica con ESP32 y PyBullet
+
+<p align="center">
+  <b>Universidad Militar Nueva Granada</b><br>
+  <b>Ingeniería Mecatrónica — Taller del Segundo Corte</b>
+</p>
+
+---
+
+##  Descripción del Proyecto
+Este proyecto implementa una **consola de mandos física** basada en un microcontrolador **ESP32** y un joystick analógico para gobernar de manera fluida, en tiempo real y bidireccional la movilidad y los efectores finales (pinza) de un robot simulado en el entorno físico de **PyBullet** mediante comunicación serial UART.
+
+---
+
+##  Arquitectura del Sistema
+
+1. **Hardware de Mando:**
+   * Microcontrolador **ESP32**.
+   * Joystick analógico **KY-023** (conectado a canales ADC y pines digitales para el pulsador).
+   * Sistema de filtrado por *deadzone* y normalización de coordenadas.
+
+2. **Comunicación:**
+   * Enlace serial USB por **UART** a `115200` baudios.
+   * Transmisión de tramas normalizadas en formato CSV: `X, Y, Botón`.
+
+3. **Software de Simulación:**
+   * Entorno en **Python** utilizando las librerías `pybullet`, `pybullet_data` y `pyserial`.
+   * Búfer serial optimizado en tiempo de ejecución para eliminar latencias y garantizar una respuesta fluida.
+
+---
+
+## Estructura del Repositorio
+
+```text
+ Robot-Movilidad-Real
+│
+├── ESP32_Joystick/
+│   └──  codigo_joystick.ino       # Código fuente en C++ para la lectura de la ESP32
+│
+├──  Python_PyBullet/
+│   └── 📄 main.py                   # Script principal de la simulación y control serial
+│
+├──  assets/
+│   └── 🎥 demo_funcionamiento.mp4   # Video demostrativo de la prueba física y simulada
+│
+└──  README.md                     # Documentación oficial del proyecto
