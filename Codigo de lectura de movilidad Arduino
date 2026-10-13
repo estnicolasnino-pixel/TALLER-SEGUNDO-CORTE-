@@ -1,0 +1,40 @@
+/ Pines de la ESP32
+const int PIN_X = 34;
+const int PIN_Y = 35;
+const int PIN_SW = 32;
+
+// Valores de calibración
+const int ADC_CENTER = 2048; // Centro teórico de ADC 12 bits (0-4095)
+const int DEADZONE = 200;    // Zona muerta para filtrar ruido
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(PIN_SW, INPUT_PULLUP);
+}
+
+void loop() {
+  int rawX = analogRead(PIN_X);
+  int rawY = analogRead(PIN_Y);
+  int btnState = digitalRead(PIN_SW) == LOW ? 1 : 0; // 1 presionado, 0 suelto
+
+  // Aplicar zona muerta y normalizar entre -1.0 y 1.0
+  float normX = 0.0;
+  float normY = 0.0;
+
+  if (abs(rawX - ADC_CENTER) > DEADZONE) {
+    normX = (float)(rawX - ADC_CENTER) / 2048.0;
+  }
+  if (abs(rawY - ADC_CENTER) > DEADZONE) {
+    normY = (float)(rawY - ADC_CENTER) / 2048.0;
+  }
+
+  // Enviar datos en formato JSON o CSV por el puerto serial
+  // Formato: X,Y,Boton
+  Serial.print(normX, 2);
+  Serial.print(",");
+  Serial.print(normY, 2);
+  Serial.print(",");
+  Serial.println(btnState);
+
+  delay(20); // Refresco a ~50 Hz
+}
