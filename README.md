@@ -31,7 +31,7 @@ Sistema de control en tiempo real para simulación de drones (`gym-pybullet-dron
   pip install numpy pyserial pybullet gymnasium
 
 
-  # Control HIL (Hardware-in-the-Loop) de Robot Baxter en PyBullet con ESP32
+## Control HIL (Hardware-in-the-Loop) de Robot Baxter en PyBullet con ESP32
 
 Sistema de control en tiempo real para el efector final del brazo derecho de un modelo robótico **Baxter** simulado en **PyBullet**, operado físicamente mediante un joystick analógico y un microcontrolador **ESP32** a través de comunicación serial (`pyserial`).
 
